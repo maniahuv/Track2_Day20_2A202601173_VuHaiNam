@@ -7,7 +7,7 @@
 > `make verify` sẽ fail nếu còn placeholder chưa điền. Đó là cố ý.
 
 **Họ Tên:** Vũ Hải Nam
-**Cohort:** ⬛ TỰ ĐIỀN (A20-K1 hay A20-K2?)
+**Cohort:** ⬛ 3
 **Ngày submit:** 2026-08-20
 
 ---
@@ -314,19 +314,39 @@ không hề tồn tại. Bài học vận hành: khi một điểm đo trả v�
 > Bỏ trống nếu không làm. Xem `bonus/README.md`. Đừng làm hết — **một** finding sâu
 > ăn điểm hơn năm bảng nông.
 
-**Đã làm:** _<B1 build-compare / B2 sweep nào / B4 challenge nào / B5 lựa chọn nào>_
+**Đã làm:** B2 — `make sweep-gpu` (GPU layer-offload sweep, `-ngl 0,8,16,24,32,99`
+trên Radeon 780M qua Vulkan). Chi tiết đầy đủ: `benchmarks/bonus-gpu-offload-sweep.md`.
 
 **Numbers:**
 
 ```
-before:  <số>
-after:   <số>
-speedup: <X.Y>×
+before:  14.7 tok/s   (-ngl 0,  CPU-only)
+after:   33.1 tok/s   (-ngl 99, full offload — model chỉ có 35 layer thật)
+speedup: 2.25×
 ```
 
 **Điều này nói lên gì mà deck chưa nói:**
 
-_(để trống nếu bạn không làm phần này)_
+Đường cong **không tuyến tính theo tỉ lệ layer đã offload**, và đoạn phi tuyến đó mới
+là phần thú vị. Từ `-ngl 0` đến `-ngl 32` (91% layer đã chuyển lên GPU) chỉ được
+**1.39×**. Nhưng 3 layer cuối cùng (32 → 35, tức "full") lại cộng thêm **1.61×** nữa
+— riêng 9% layer cuối đóng góp nhiều hơn cả 91% layer trước đó gộp lại.
+
+Deck nói về offload như một tỉ lệ liên tục ("chạy X% trên accelerator"), nhưng số đo
+trên máy này cho thấy llama.cpp phạt nặng **partial** offload: hễ còn dù chỉ 1 layer
+chạy trên CPU, activation phải vượt ranh giới CPU↔GPU ở đúng layer đó **mỗi lượt
+forward pass** — một lần đồng bộ + truyền dữ liệu qua driver. Cái giá đó chỉ biến mất
+khi **100% layer** nằm trên GPU, không phải giảm dần theo tỉ lệ offload. Nói cách khác:
+trên iGPU này, offload không phải một núm vặn liên tục — nó gần như một công tắc
+nhị phân (tất cả hoặc gần như không đáng).
+
+Điều thứ hai không có trong deck: vì Radeon 780M là **iGPU dùng UMA** (unified memory
+— CPU và GPU share chung 23.3 GB RAM, không có VRAM riêng), đường cong sweep **không
+hề peak dưới full offload** như phần mô tả của script cảnh báo ("peak dưới full
+offload nghĩa là có gì đó không fit VRAM"). Với GPU rời có VRAM giới hạn, tình huống
+"model quá lớn nên phải chọn điểm offload từng phần tối ưu" là có thật; với iGPU UMA
+trên máy tôi, câu hỏi đó không tồn tại — chỉ cần hỏi "full offload hay không", không
+cần dò điểm partial nào là tốt nhất.
 
 ---
 
