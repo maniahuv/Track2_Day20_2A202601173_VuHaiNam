@@ -1,4 +1,4 @@
-<#
+﻿<#
   Windows runner — the equivalent of `make <target>` for students without make.
 
   Works in Windows PowerShell 5.1 (powershell.exe) and PowerShell 7+ (pwsh).
@@ -21,6 +21,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
+
+# Windows defaults Python's text I/O to the ANSI codepage (cp1252 here), which writes
+# mojibake into benchmarks/*.md and makes verify.py crash on REFLECTION.md's Vietnamese.
+# The lab's files are UTF-8 everywhere else, so say so.
+$env:PYTHONUTF8 = '1'
 
 $VenvPy = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
 $Port   = if ($env:LAB_SERVER_PORT) { $env:LAB_SERVER_PORT } else { '8080' }
