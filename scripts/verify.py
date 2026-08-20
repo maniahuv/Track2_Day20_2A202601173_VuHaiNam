@@ -71,7 +71,9 @@ def is_committed(path: pathlib.Path) -> bool | None:
     if TRACKED is None:
         return None
     try:
-        rel = str(path.resolve().relative_to(labkit.repo_root()))
+        # `git ls-files` always reports posix separators; pathlib on Windows would
+        # produce backslashes here, so nothing under a subdirectory would ever match.
+        rel = path.resolve().relative_to(labkit.repo_root()).as_posix()
     except ValueError:
         return None
     return rel in TRACKED
